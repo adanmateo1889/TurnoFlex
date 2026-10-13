@@ -1,5 +1,5 @@
-const { readDatabase, writeDatabase } = require('../utils/jsonFile');
 const Disponibilidad = require('../models/Disponibilidad');
+const Profesional = require('../models/Profesional');
 
 function datosValidos(body, esCreacion) {
   if (!body) {
@@ -19,15 +19,6 @@ function datosValidos(body, esCreacion) {
     && /^\d{2}:\d{2}$/.test(body.hora)
     && body.hora.trim() !== ''
     && disponibleValido;
-}
-
-function disponibilidadRepetida(disponibilidades, disponibilidad, id) {
-  return disponibilidades.some((item) => (
-    item.id !== id
-    && item.profesionalId === disponibilidad.profesionalId
-    && item.fecha === disponibilidad.fecha
-    && item.hora === disponibilidad.hora
-  ));
 }
 
 function filtrosValidos(query) {
@@ -53,26 +44,30 @@ async function listarDisponibilidades(req, res) {
     return res.status(400).json({ mensaje: 'Filtros incorrectos' });
   }
 
-  const database = await readDatabase();
-  const disponibilidades = database.disponibilidades.filter((item) => {
-    const profesionalCoincide = req.query.profesionalId === undefined
-      || item.profesionalId === Number(req.query.profesionalId);
-    const fechaCoincide = req.query.fecha === undefined
-      || item.fecha === req.query.fecha;
-    const disponibleCoincide = req.query.disponible === undefined
-      || item.disponible === (req.query.disponible === 'true');
+  const filtros = {};
+  if (req.query.profesionalId !== undefined) {
+    filtros.profesionalId = Number(req.query.profesionalId);
+  }
+  if (req.query.fecha !== undefined) {
+    filtros.fecha = req.query.fecha;
+  }
+  if (req.query.disponible !== undefined) {
+    filtros.disponible = req.query.disponible === 'true';
+  }
 
-    return profesionalCoincide && fechaCoincide && disponibleCoincide;
-  });
+  const disponibilidades = await Disponibilidad.find(filtros)
+    .select('-_id id profesionalId fecha hora disponible')
+    .lean();
 
   res.status(200).json(disponibilidades);
 }
 
 async function obtenerDisponibilidad(req, res) {
-  const database = await readDatabase();
-  const disponibilidad = database.disponibilidades.find(
-    (item) => item.id === Number(req.params.id)
-  );
+  const disponibilidad = await Disponibilidad.findOne({
+    id: Number(req.params.id)
+  })
+    .select('-_id id profesionalId fecha hora disponible')
+    .lean();
 
   if (!disponibilidad) {
     return res.status(404).json({ mensaje: 'Disponibilidad no encontrada' });
@@ -88,34 +83,40 @@ async function crearDisponibilidad(req, res) {
     });
   }
 
-  const database = await readDatabase();
-  const profesional = database.profesionales.find(
-    (item) => item.id === req.body.profesionalId
-  );
+  const profesional = await Profesional.exists({ id: req.body.profesionalId });
 
   if (!profesional) {
     return res.status(404).json({ mensaje: 'Profesional no encontrado' });
   }
 
-  const disponibilidad = new Disponibilidad(
-    database.disponibilidades.reduce(
-      (maxId, item) => Math.max(maxId, item.id),
-      0
-    ) + 1,
-    req.body.profesionalId,
-    req.body.fecha.trim(),
-    req.body.hora.trim(),
-    req.body.disponible === undefined ? true : req.body.disponible
-  );
-
-  if (disponibilidadRepetida(database.disponibilidades, disponibilidad)) {
+  const datosDisponibilidad = {
+    profesionalId: req.body.profesionalId,
+    fecha: req.body.fecha.trim(),
+    hora: req.body.hora.trim()
+  };
+  const repetida = await Disponibilidad.exists(datosDisponibilidad);
+  if (repetida) {
     return res.status(409).json({ mensaje: 'La disponibilidad ya existe' });
   }
 
-  database.disponibilidades.push(disponibilidad);
-  await writeDatabase(database);
+  const ultimaDisponibilidad = await Disponibilidad.findOne()
+    .sort({ id: -1 })
+    .select('id -_id')
+    .lean();
 
-  res.status(201).json(disponibilidad);
+  try {
+    const disponibilidad = await Disponibilidad.create({
+      id: ultimaDisponibilidad ? ultimaDisponibilidad.id + 1 : 1,
+      ...datosDisponibilidad,
+      disponible: req.body.disponible === undefined ? true : req.body.disponible
+    });
+    res.status(201).json(disponibilidad);
+  } catch (error) {
+    if (error.code === 11000 && await Disponibilidad.exists(datosDisponibilidad)) {
+      return res.status(409).json({ mensaje: 'La disponibilidad ya existe' });
+    }
+    throw error;
+  }
 }
 
 async function modificarDisponibilidad(req, res) {
@@ -125,53 +126,59 @@ async function modificarDisponibilidad(req, res) {
     });
   }
 
-  const database = await readDatabase();
-  const indice = database.disponibilidades.findIndex(
-    (item) => item.id === Number(req.params.id)
-  );
-
-  if (indice === -1) {
+  const disponibilidad = await Disponibilidad.findOne({
+    id: Number(req.params.id)
+  });
+  if (!disponibilidad) {
     return res.status(404).json({ mensaje: 'Disponibilidad no encontrada' });
   }
 
-  const profesional = database.profesionales.find(
-    (item) => item.id === req.body.profesionalId
-  );
+  const profesional = await Profesional.exists({ id: req.body.profesionalId });
 
   if (!profesional) {
     return res.status(404).json({ mensaje: 'Profesional no encontrado' });
   }
 
-  const disponibilidad = {
-    id: database.disponibilidades[indice].id,
+  const datosDisponibilidad = {
     profesionalId: req.body.profesionalId,
     fecha: req.body.fecha.trim(),
-    hora: req.body.hora.trim(),
-    disponible: req.body.disponible
+    hora: req.body.hora.trim()
   };
+  const repetida = await Disponibilidad.exists({
+    ...datosDisponibilidad,
+    id: { $ne: disponibilidad.id }
+  });
 
-  if (disponibilidadRepetida(database.disponibilidades, disponibilidad, disponibilidad.id)) {
+  if (repetida) {
     return res.status(409).json({ mensaje: 'La disponibilidad ya existe' });
   }
 
-  database.disponibilidades[indice] = disponibilidad;
-  await writeDatabase(database);
+  disponibilidad.profesionalId = datosDisponibilidad.profesionalId;
+  disponibilidad.fecha = datosDisponibilidad.fecha;
+  disponibilidad.hora = datosDisponibilidad.hora;
+  disponibilidad.disponible = req.body.disponible;
 
-  res.status(200).json(disponibilidad);
+  try {
+    await disponibilidad.save();
+    res.status(200).json(disponibilidad);
+  } catch (error) {
+    if (error.code === 11000 && await Disponibilidad.exists({
+      ...datosDisponibilidad,
+      id: { $ne: disponibilidad.id }
+    })) {
+      return res.status(409).json({ mensaje: 'La disponibilidad ya existe' });
+    }
+    throw error;
+  }
 }
 
 async function eliminarDisponibilidad(req, res) {
-  const database = await readDatabase();
-  const indice = database.disponibilidades.findIndex(
-    (item) => item.id === Number(req.params.id)
-  );
-
-  if (indice === -1) {
+  const disponibilidad = await Disponibilidad.findOneAndDelete({
+    id: Number(req.params.id)
+  });
+  if (!disponibilidad) {
     return res.status(404).json({ mensaje: 'Disponibilidad no encontrada' });
   }
-
-  database.disponibilidades.splice(indice, 1);
-  await writeDatabase(database);
 
   res.status(204).send();
 }

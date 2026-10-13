@@ -49,4 +49,14 @@ const turnoSchema = new mongoose.Schema({
   }
 });
 
+turnoSchema.index(
+  { profesionalId: 1, fecha: 1, hora: 1 },
+  { unique: true, partialFilterExpression: { estado: 'reservado' } }
+);
+
+turnoSchema.index(
+  { clienteId: 1, fecha: 1, hora: 1 },
+  { unique: true, partialFilterExpression: { estado: 'reservado' } }
+);
+
 module.exports = mongoose.model('Turno', turnoSchema);

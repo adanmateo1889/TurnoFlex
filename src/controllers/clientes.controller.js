@@ -1,4 +1,3 @@
-const { readDatabase, writeDatabase } = require('../utils/jsonFile');
 const Cliente = require('../models/Cliente');
 
 function datosValidos(body) {
@@ -10,15 +9,16 @@ function datosValidos(body) {
 }
 
 async function listarClientes(req, res) {
-  const database = await readDatabase();
-  res.status(200).json(database.clientes);
+  const clientes = await Cliente.find()
+    .select('-_id id nombre apellido')
+    .lean();
+  res.status(200).json(clientes);
 }
 
 async function obtenerCliente(req, res) {
-  const database = await readDatabase();
-  const cliente = database.clientes.find(
-    (item) => item.id === Number(req.params.id)
-  );
+  const cliente = await Cliente.findOne({ id: Number(req.params.id) })
+    .select('-_id id nombre apellido')
+    .lean();
 
   if (!cliente) {
     return res.status(404).json({ mensaje: 'Cliente no encontrado' });
@@ -34,19 +34,15 @@ async function crearCliente(req, res) {
     });
   }
 
-  const database = await readDatabase();
-  const ultimoId = database.clientes.reduce(
-    (maxId, cliente) => Math.max(maxId, cliente.id),
-    0
-  );
-  const cliente = new Cliente(
-    ultimoId + 1,
-    req.body.nombre.trim(),
-    req.body.apellido.trim()
-  );
-
-  database.clientes.push(cliente);
-  await writeDatabase(database);
+  const ultimoCliente = await Cliente.findOne()
+    .sort({ id: -1 })
+    .select('id -_id')
+    .lean();
+  const cliente = await Cliente.create({
+    id: ultimoCliente ? ultimoCliente.id + 1 : 1,
+    nombre: req.body.nombre.trim(),
+    apellido: req.body.apellido.trim()
+  });
 
   res.status(201).json(cliente);
 }
@@ -58,39 +54,25 @@ async function modificarCliente(req, res) {
     });
   }
 
-  const database = await readDatabase();
-  const indice = database.clientes.findIndex(
-    (item) => item.id === Number(req.params.id)
-  );
-
-  if (indice === -1) {
+  const cliente = await Cliente.findOne({ id: Number(req.params.id) });
+  if (!cliente) {
     return res.status(404).json({ mensaje: 'Cliente no encontrado' });
   }
 
-  const cliente = {
-    id: database.clientes[indice].id,
-    nombre: req.body.nombre.trim(),
-    apellido: req.body.apellido.trim()
-  };
-
-  database.clientes[indice] = cliente;
-  await writeDatabase(database);
+  cliente.nombre = req.body.nombre.trim();
+  cliente.apellido = req.body.apellido.trim();
+  await cliente.save();
 
   res.status(200).json(cliente);
 }
 
 async function eliminarCliente(req, res) {
-  const database = await readDatabase();
-  const indice = database.clientes.findIndex(
-    (item) => item.id === Number(req.params.id)
-  );
-
-  if (indice === -1) {
+  const cliente = await Cliente.findOneAndDelete({
+    id: Number(req.params.id)
+  });
+  if (!cliente) {
     return res.status(404).json({ mensaje: 'Cliente no encontrado' });
   }
-
-  database.clientes.splice(indice, 1);
-  await writeDatabase(database);
 
   res.status(204).send();
 }

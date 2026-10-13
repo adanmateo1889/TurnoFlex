@@ -1,4 +1,3 @@
-const { readDatabase, writeDatabase } = require('../utils/jsonFile');
 const Profesional = require('../models/Profesional');
 
 function datosValidos(body) {
@@ -10,15 +9,16 @@ function datosValidos(body) {
 }
 
 async function listarProfesionales(req, res) {
-  const database = await readDatabase();
-  res.status(200).json(database.profesionales);
+  const profesionales = await Profesional.find()
+    .select('-_id id nombre apellido')
+    .lean();
+  res.status(200).json(profesionales);
 }
 
 async function obtenerProfesional(req, res) {
-  const database = await readDatabase();
-  const profesional = database.profesionales.find(
-    (item) => item.id === Number(req.params.id)
-  );
+  const profesional = await Profesional.findOne({ id: Number(req.params.id) })
+    .select('-_id id nombre apellido')
+    .lean();
 
   if (!profesional) {
     return res.status(404).json({ mensaje: 'Profesional no encontrado' });
@@ -34,19 +34,15 @@ async function crearProfesional(req, res) {
     });
   }
 
-  const database = await readDatabase();
-  const ultimoId = database.profesionales.reduce(
-    (maxId, profesional) => Math.max(maxId, profesional.id),
-    0
-  );
-  const profesional = new Profesional(
-    ultimoId + 1,
-    req.body.nombre.trim(),
-    req.body.apellido.trim()
-  );
-
-  database.profesionales.push(profesional);
-  await writeDatabase(database);
+  const ultimoProfesional = await Profesional.findOne()
+    .sort({ id: -1 })
+    .select('id -_id')
+    .lean();
+  const profesional = await Profesional.create({
+    id: ultimoProfesional ? ultimoProfesional.id + 1 : 1,
+    nombre: req.body.nombre.trim(),
+    apellido: req.body.apellido.trim()
+  });
 
   res.status(201).json(profesional);
 }
@@ -58,39 +54,25 @@ async function modificarProfesional(req, res) {
     });
   }
 
-  const database = await readDatabase();
-  const indice = database.profesionales.findIndex(
-    (item) => item.id === Number(req.params.id)
-  );
-
-  if (indice === -1) {
+  const profesional = await Profesional.findOne({ id: Number(req.params.id) });
+  if (!profesional) {
     return res.status(404).json({ mensaje: 'Profesional no encontrado' });
   }
 
-  const profesional = {
-    id: database.profesionales[indice].id,
-    nombre: req.body.nombre.trim(),
-    apellido: req.body.apellido.trim()
-  };
-
-  database.profesionales[indice] = profesional;
-  await writeDatabase(database);
+  profesional.nombre = req.body.nombre.trim();
+  profesional.apellido = req.body.apellido.trim();
+  await profesional.save();
 
   res.status(200).json(profesional);
 }
 
 async function eliminarProfesional(req, res) {
-  const database = await readDatabase();
-  const indice = database.profesionales.findIndex(
-    (item) => item.id === Number(req.params.id)
-  );
-
-  if (indice === -1) {
+  const profesional = await Profesional.findOneAndDelete({
+    id: Number(req.params.id)
+  });
+  if (!profesional) {
     return res.status(404).json({ mensaje: 'Profesional no encontrado' });
   }
-
-  database.profesionales.splice(indice, 1);
-  await writeDatabase(database);
 
   res.status(204).send();
 }

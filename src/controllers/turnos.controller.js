@@ -1,5 +1,7 @@
-const { readDatabase, writeDatabase } = require('../utils/jsonFile');
 const Turno = require('../models/Turno');
+const Profesional = require('../models/Profesional');
+const Cliente = require('../models/Cliente');
+const Disponibilidad = require('../models/Disponibilidad');
 
 const estadosPermitidos = ['reservado', 'cancelado', 'atendido'];
 
@@ -34,26 +36,31 @@ async function listarTurnos(req, res) {
     return res.status(400).json({ mensaje: 'Filtros incorrectos' });
   }
 
-  const database = await readDatabase();
-  const turnos = database.turnos.filter((turno) => {
-    const profesionalCoincide = req.query.profesionalId === undefined
-      || turno.profesionalId === Number(req.query.profesionalId);
-    const clienteCoincide = req.query.clienteId === undefined
-      || turno.clienteId === Number(req.query.clienteId);
-    const fechaCoincide = req.query.fecha === undefined
-      || turno.fecha === req.query.fecha;
-    const estadoCoincide = req.query.estado === undefined
-      || turno.estado === req.query.estado;
+  const filtros = {};
+  if (req.query.profesionalId !== undefined) {
+    filtros.profesionalId = Number(req.query.profesionalId);
+  }
+  if (req.query.clienteId !== undefined) {
+    filtros.clienteId = Number(req.query.clienteId);
+  }
+  if (req.query.fecha !== undefined) {
+    filtros.fecha = req.query.fecha;
+  }
+  if (req.query.estado !== undefined) {
+    filtros.estado = req.query.estado;
+  }
 
-    return profesionalCoincide && clienteCoincide && fechaCoincide && estadoCoincide;
-  });
+  const turnos = await Turno.find(filtros)
+    .select('-_id id profesionalId clienteId disponibilidadId fecha hora estado')
+    .lean();
 
   res.status(200).json(turnos);
 }
 
 async function obtenerTurno(req, res) {
-  const database = await readDatabase();
-  const turno = database.turnos.find((item) => item.id === Number(req.params.id));
+  const turno = await Turno.findOne({ id: Number(req.params.id) })
+    .select('-_id id profesionalId clienteId disponibilidadId fecha hora estado')
+    .lean();
 
   if (!turno) {
     return res.status(404).json({ mensaje: 'Turno no encontrado' });
@@ -69,24 +76,21 @@ async function crearTurno(req, res) {
     });
   }
 
-  const database = await readDatabase();
-  const profesional = database.profesionales.find(
-    (item) => item.id === req.body.profesionalId
-  );
-  const cliente = database.clientes.find(
-    (item) => item.id === req.body.clienteId
-  );
-  const disponibilidad = database.disponibilidades.find(
-    (item) => item.id === req.body.disponibilidadId
-  );
+  const profesional = await Profesional.exists({ id: req.body.profesionalId });
 
   if (!profesional) {
     return res.status(404).json({ mensaje: 'Profesional no encontrado' });
   }
 
+  const cliente = await Cliente.exists({ id: req.body.clienteId });
+
   if (!cliente) {
     return res.status(404).json({ mensaje: 'Cliente no encontrado' });
   }
+
+  const disponibilidad = await Disponibilidad.findOne({
+    id: req.body.disponibilidadId
+  });
 
   if (!disponibilidad) {
     return res.status(404).json({ mensaje: 'Disponibilidad no encontrada' });
@@ -102,41 +106,74 @@ async function crearTurno(req, res) {
     return res.status(409).json({ mensaje: 'La disponibilidad no esta disponible' });
   }
 
-  const profesionalTieneTurno = database.turnos.some((turno) => (
-    turno.profesionalId === req.body.profesionalId
-    && turno.fecha === disponibilidad.fecha
-    && turno.hora === disponibilidad.hora
-    && turno.estado === 'reservado'
-  ));
-  const clienteTieneTurno = database.turnos.some((turno) => (
-    turno.clienteId === req.body.clienteId
-    && turno.fecha === disponibilidad.fecha
-    && turno.hora === disponibilidad.hora
-    && turno.estado === 'reservado'
-  ));
+  const horarioReservado = await Turno.exists({
+    fecha: disponibilidad.fecha,
+    hora: disponibilidad.hora,
+    estado: 'reservado',
+    $or: [
+      { profesionalId: req.body.profesionalId },
+      { clienteId: req.body.clienteId }
+    ]
+  });
 
-  if (profesionalTieneTurno || clienteTieneTurno) {
+  if (horarioReservado) {
     return res.status(409).json({ mensaje: 'El horario ya esta reservado' });
   }
 
-  const turno = new Turno(
-    database.turnos.reduce(
-      (maxId, item) => Math.max(maxId, item.id),
-      0
-    ) + 1,
-    req.body.profesionalId,
-    req.body.clienteId,
-    req.body.disponibilidadId,
-    disponibilidad.fecha,
-    disponibilidad.hora,
-    'reservado'
+  const disponibilidadReservada = await Disponibilidad.findOneAndUpdate(
+    { id: req.body.disponibilidadId, disponible: true },
+    { $set: { disponible: false } },
+    { returnDocument: 'after' }
   );
 
-  database.turnos.push(turno);
-  disponibilidad.disponible = false;
-  await writeDatabase(database);
+  if (!disponibilidadReservada) {
+    const sigueExistiendo = await Disponibilidad.exists({
+      id: req.body.disponibilidadId
+    });
+    if (!sigueExistiendo) {
+      return res.status(404).json({ mensaje: 'Disponibilidad no encontrada' });
+    }
+    return res.status(409).json({ mensaje: 'La disponibilidad no esta disponible' });
+  }
 
-  res.status(201).json(turno);
+  const ultimoTurno = await Turno.findOne()
+    .sort({ id: -1 })
+    .select('id -_id')
+    .lean();
+
+  try {
+    const turno = await Turno.create({
+      id: ultimoTurno ? ultimoTurno.id + 1 : 1,
+      profesionalId: req.body.profesionalId,
+      clienteId: req.body.clienteId,
+      disponibilidadId: disponibilidadReservada.id,
+      fecha: disponibilidadReservada.fecha,
+      hora: disponibilidadReservada.hora,
+      estado: 'reservado'
+    });
+    res.status(201).json(turno);
+  } catch (error) {
+    await Disponibilidad.updateOne(
+      { id: disponibilidadReservada.id },
+      { $set: { disponible: true } }
+    );
+
+    if (error.code === 11000) {
+      const horarioEnConflicto = await Turno.exists({
+        fecha: disponibilidadReservada.fecha,
+        hora: disponibilidadReservada.hora,
+        estado: 'reservado',
+        $or: [
+          { profesionalId: req.body.profesionalId },
+          { clienteId: req.body.clienteId }
+        ]
+      });
+      if (horarioEnConflicto) {
+        return res.status(409).json({ mensaje: 'El horario ya esta reservado' });
+      }
+    }
+    throw error;
+  }
 }
 
 async function modificarEstadoTurno(req, res) {
@@ -146,8 +183,7 @@ async function modificarEstadoTurno(req, res) {
     });
   }
 
-  const database = await readDatabase();
-  const turno = database.turnos.find((item) => item.id === Number(req.params.id));
+  const turno = await Turno.findOne({ id: Number(req.params.id) });
 
   if (!turno) {
     return res.status(404).json({ mensaje: 'Turno no encontrado' });
@@ -157,15 +193,21 @@ async function modificarEstadoTurno(req, res) {
     return res.status(409).json({ mensaje: 'El turno no puede ser atendido' });
   }
 
-  turno.estado = 'atendido';
-  await writeDatabase(database);
+  const turnoActualizado = await Turno.findOneAndUpdate(
+    { id: turno.id, estado: 'reservado' },
+    { $set: { estado: 'atendido' } },
+    { returnDocument: 'after' }
+  );
 
-  res.status(200).json(turno);
+  if (!turnoActualizado) {
+    return res.status(409).json({ mensaje: 'El turno no puede ser atendido' });
+  }
+
+  res.status(200).json(turnoActualizado);
 }
 
 async function cancelarTurno(req, res) {
-  const database = await readDatabase();
-  const turno = database.turnos.find((item) => item.id === Number(req.params.id));
+  const turno = await Turno.findOne({ id: Number(req.params.id) });
 
   if (!turno) {
     return res.status(404).json({ mensaje: 'Turno no encontrado' });
@@ -175,19 +217,30 @@ async function cancelarTurno(req, res) {
     return res.status(409).json({ mensaje: 'El turno ya esta cancelado' });
   }
 
-  const disponibilidad = database.disponibilidades.find(
-    (item) => item.id === turno.disponibilidadId
-  );
+  const disponibilidad = await Disponibilidad.findOne({
+    id: turno.disponibilidadId
+  });
 
   if (!disponibilidad) {
     return res.status(404).json({ mensaje: 'Disponibilidad no encontrada' });
   }
 
-  turno.estado = 'cancelado';
-  disponibilidad.disponible = true;
-  await writeDatabase(database);
+  const turnoCancelado = await Turno.findOneAndUpdate(
+    { id: turno.id, estado: { $ne: 'cancelado' } },
+    { $set: { estado: 'cancelado' } },
+    { returnDocument: 'after' }
+  );
 
-  res.status(200).json(turno);
+  if (!turnoCancelado) {
+    return res.status(409).json({ mensaje: 'El turno ya esta cancelado' });
+  }
+
+  await Disponibilidad.updateOne(
+    { id: disponibilidad.id },
+    { $set: { disponible: true } }
+  );
+
+  res.status(200).json(turnoCancelado);
 }
 
 module.exports = {
