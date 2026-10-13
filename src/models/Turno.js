@@ -1,13 +1,52 @@
-class Turno {
-  constructor(id, profesionalId, clienteId, disponibilidadId, fecha, hora, estado) {
-    this.id = id;
-    this.profesionalId = profesionalId;
-    this.clienteId = clienteId;
-    this.disponibilidadId = disponibilidadId;
-    this.fecha = fecha;
-    this.hora = hora;
-    this.estado = estado;
-  }
-}
+const mongoose = require('mongoose');
 
-module.exports = Turno;
+const turnoSchema = new mongoose.Schema({
+  id: {
+    type: Number,
+    required: true,
+    unique: true,
+    min: 1
+  },
+  profesionalId: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  clienteId: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  disponibilidadId: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  fecha: {
+    type: String,
+    required: true,
+    match: /^\d{4}-\d{2}-\d{2}$/
+  },
+  hora: {
+    type: String,
+    required: true,
+    match: /^\d{2}:\d{2}$/
+  },
+  estado: {
+    type: String,
+    required: true,
+    enum: ['reservado', 'cancelado', 'atendido']
+  }
+}, {
+  id: false,
+  versionKey: false,
+  collection: 'turnos',
+  toJSON: {
+    transform: (document, returned) => {
+      delete returned._id;
+      return returned;
+    }
+  }
+});
+
+module.exports = mongoose.model('Turno', turnoSchema);

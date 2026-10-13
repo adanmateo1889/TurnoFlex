@@ -1,9 +1,32 @@
-class Profesional {
-  constructor(id, nombre, apellido) {
-    this.id = id;
-    this.nombre = nombre;
-    this.apellido = apellido;
-  }
-}
+const mongoose = require('mongoose');
 
-module.exports = Profesional;
+const profesionalSchema = new mongoose.Schema({
+  id: {
+    type: Number,
+    required: true,
+    unique: true,
+    min: 1
+  },
+  nombre: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  apellido: {
+    type: String,
+    required: true,
+    trim: true
+  }
+}, {
+  id: false,
+  versionKey: false,
+  collection: 'profesionales',
+  toJSON: {
+    transform: (document, returned) => {
+      delete returned._id;
+      return returned;
+    }
+  }
+});
+
+module.exports = mongoose.model('Profesional', profesionalSchema);
