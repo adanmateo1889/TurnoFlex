@@ -4,6 +4,11 @@
       "id": 1,
       "nombre": "Laura",
       "apellido": "Gomez"
+    },
+    {
+      "id": 2,
+      "nombre": "Laura",
+      "apellido": "Gomez"
     }
   ],
   "clientes": [
@@ -29,7 +34,7 @@
       "profesionalId": 1,
       "fecha": "2026-10-15",
       "hora": "11:00",
-      "disponible": true
+      "disponible": false
     }
   ],
   "turnos": [
@@ -41,6 +46,15 @@
       "fecha": "2026-10-15",
       "hora": "11:00",
       "estado": "cancelado"
+    },
+    {
+      "id": 2,
+      "profesionalId": 1,
+      "clienteId": 1,
+      "disponibilidadId": 1,
+      "fecha": "2026-10-15",
+      "hora": "11:00",
+      "estado": "reservado"
     }
   ]
 }
