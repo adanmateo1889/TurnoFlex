@@ -48,6 +48,9 @@ async function listarDisponibilidades(req, res) {
   if (req.query.profesionalId !== undefined) {
     filtros.profesionalId = Number(req.query.profesionalId);
   }
+  if (req.profesionalIdAutorizado !== undefined) {
+    filtros.profesionalId = req.profesionalIdAutorizado;
+  }
   if (req.query.fecha !== undefined) {
     filtros.fecha = req.query.fecha;
   }
