@@ -9,7 +9,10 @@ function datosValidos(body) {
 }
 
 async function listarProfesionales(req, res) {
-  const profesionales = await Profesional.find()
+  const filtro = req.profesionalIdAutorizado === undefined
+    ? {}
+    : { id: req.profesionalIdAutorizado };
+  const profesionales = await Profesional.find(filtro)
     .select('-_id id nombre apellido')
     .lean();
   res.status(200).json(profesionales);

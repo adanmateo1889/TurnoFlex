@@ -49,6 +49,9 @@ async function listarTurnos(req, res) {
   if (req.query.estado !== undefined) {
     filtros.estado = req.query.estado;
   }
+  if (req.turnoScope) {
+    Object.assign(filtros, req.turnoScope);
+  }
 
   const turnos = await Turno.find(filtros)
     .select('-_id id profesionalId clienteId disponibilidadId fecha hora estado')
