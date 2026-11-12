@@ -1,0 +1,12 @@
+sequenceDiagram
+    actor ClienteHTTP
+    participant API as Express / auth
+    participant DB as MongoDB Atlas
+    ClienteHTTP->>API: POST /auth/login (email, password)
+    API->>DB: Busca usuario por email y solicita passwordHash
+    DB-->>API: Usuario / hash
+    API->>API: Verifica bcryptjs y estado activo
+    API-->>ClienteHTTP: 200 token Bearer (1h) o 400/401
+    ClienteHTTP->>API: Ruta protegida + Authorization Bearer
+    API->>DB: Busca usuario activo por subject
+    API-->>ClienteHTTP: Continúa o 401

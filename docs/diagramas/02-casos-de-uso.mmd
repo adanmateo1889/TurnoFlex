@@ -1,0 +1,42 @@
+classDiagram
+    class Usuario {
+      +Number id
+      +String email
+      +String passwordHash
+      +String rol
+      +Boolean activo
+      +Number profesionalId
+      +Number clienteId
+    }
+    class Profesional {
+      +Number id
+      +String nombre
+      +String apellido
+    }
+    class Cliente {
+      +Number id
+      +String nombre
+      +String apellido
+    }
+    class Disponibilidad {
+      +Number id
+      +Number profesionalId
+      +String fecha
+      +String hora
+      +Boolean disponible
+    }
+    class Turno {
+      +Number id
+      +Number profesionalId
+      +Number clienteId
+      +Number disponibilidadId
+      +String fecha
+      +String hora
+      +String estado
+    }
+    Usuario "0..1" --> "1" Profesional : profesionalId
+    Usuario "0..1" --> "1" Cliente : clienteId
+    Profesional "1" --> "0..*" Disponibilidad : profesionalId
+    Profesional "1" --> "0..*" Turno : profesionalId
+    Cliente "1" --> "0..*" Turno : clienteId
+    Disponibilidad "1" --> "0..*" Turno : disponibilidadId

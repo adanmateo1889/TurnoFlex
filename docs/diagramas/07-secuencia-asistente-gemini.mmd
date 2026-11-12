@@ -1,0 +1,12 @@
+flowchart LR
+    H[Cliente HTTP] -->|HTTPS| R[Render Web Service]
+    R --> N[Node.js + Express]
+    N --> RT[Rutas]
+    RT --> MW[JWT + autorización]
+    MW --> CT[Controladores]
+    CT --> MG[Mongoose]
+    MG --> AT[(MongoDB Atlas)]
+    CT -->|solo texto validado| GE[Gemini API]
+    EV[Environment Variables] -.-> R
+    EV -.-> AT
+    EV -.-> GE

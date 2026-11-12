@@ -1,0 +1,11 @@
+sequenceDiagram
+    actor ClienteHTTP
+    participant API as Express / asistente
+    participant Gemini
+    ClienteHTTP->>API: POST /asistente + JWT + mensaje
+    API->>API: Verifica cuenta activa, body y patrones
+    API->>Gemini: Instrucción + rol + mensaje (sin JWT)
+    Note over API,Gemini: No consulta MongoDB ni ejecuta operaciones
+    Gemini-->>API: Texto generado
+    API->>API: Valida respuesta
+    API-->>ClienteHTTP: 200 {respuesta} o 502/503/504
