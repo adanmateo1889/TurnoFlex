@@ -1,0 +1,17 @@
+flowchart LR
+    C[Coordinador] --- UC1[Administrar usuarios]
+    C --- UC2[Administrar recursos]
+    C --- UC3[Gestionar turnos]
+    R[Recepcionista] --- UC4[Administrar clientes]
+    R --- UC5[Consultar agenda]
+    R --- UC6[Reservar o cancelar]
+    P[Profesional] --- UC7[Administrar disponibilidades propias]
+    P --- UC8[Consultar turnos propios]
+    P --- UC9[Marcar turno propio atendido]
+    CL[Cliente] --- UC10[Consultar profesionales y disponibilidades]
+    CL --- UC11[Reservar o cancelar turno propio]
+    CL --- UC12[Consultar perfil y turnos propios]
+    C --- AI[Consultar asistente informativo]
+    R --- AI
+    P --- AI
+    CL --- AI

@@ -18,7 +18,7 @@
 - [ ] Servicio Render en estado Live.
 - [ ] Atlas conectado y colecciones persistentes.
 - [ ] Login JWT y endpoints protegidos funcionando.
-- [ ] Respuestas `401`, `403`, `201`, `200` y `409` verificadas con datos demo.
+- [ ] En producción: `401`, `201`, `200` y `409` verificados con datos demo; documentar que el `403` de evidencia se obtiene local/staging, no modificando Atlas productivo.
 - [ ] Cancelación restaura disponibilidad.
 - [ ] Asistente Gemini disponible y limitado a orientación informativa.
 - [ ] Nunca mostrar `.env`, claves, URI, contraseñas, JWT completos ni datos personales.
@@ -29,8 +29,8 @@
 - [ ] Portada con institución, materia/comisión, docente y fecha completados.
 - [ ] Cuatro integrantes incluidos; propuesta de responsabilidades validada o identificada claramente como propuesta.
 - [ ] RF/RNF y bibliografía presentes.
-- [ ] Diagramas Mermaid exportados y legibles en el PDF.
-- [ ] Capturas seleccionadas, recortadas y anonimizadas.
+- [ ] Revisar los SVG generados en `docs/diagramas/exportados/` y confirmar legibilidad en el PDF.
+- [ ] Capturas seleccionadas, recortadas y anonimizadas; la de `403` está rotulada como local/staging.
 - [ ] Resultados de prueba identificados como comprobados o reportados; no afirmar pruebas nuevas si no se ejecutaron.
 - [ ] Uso de IA declarado de forma honesta.
 - [ ] Enlaces del video y carpeta Drive completos y probados; no conservar placeholders en el PDF final.
@@ -53,6 +53,7 @@
 - [ ] Archivo individual ZIP/RAR preparado para campus y probado antes de subirlo.
 - [ ] El ZIP no contiene `.env`, credenciales, tokens, API keys, dumps sensibles ni `node_modules`.
 - [ ] PDF, video, código y documentos finales corresponden a la misma versión.
+- [ ] Render usa Node 24; si la grabación se ejecuta localmente, usar Node 24. El proyecto declara `>=22 <25`; Node 26 está fuera del rango.
 
 ## Evidencias recomendadas
 
@@ -62,7 +63,7 @@ Limitar el PDF a capturas legibles, complementarias y sin información sensible:
 |---|---|---|
 | Render en estado Live con URL del servicio | Despliegue online | 13. Despliegue en Render |
 | MongoDB Atlas mostrando solo colecciones | Persistencia remota y recursos | 12. MongoDB Atlas |
-| Thunder Client: ruta protegida sin token (`401`) y un rol insuficiente (`403`) | Autenticación y autorización | 9–10. Seguridad / roles; o 20. Pruebas |
+| Thunder Client: ruta protegida sin token (`401`) y prueba controlada local/staging con rol insuficiente (`403`) | Autenticación y autorización | 9–10. Seguridad / roles; o 20. Pruebas; rotular el entorno del `403` |
 | Thunder Client: reserva (`201`), cancelación (`200`), segunda cancelación (`409`) y disponibilidad libre | Reglas de negocio | 11. Funcionalidades / 20. Pruebas |
 | `/asistente`: pregunta de reserva con respuesta española (`200`) | Asistencia informativa | 14. Asistente Gemini |
 | `/asistente`: petición de cancelar y aclaración de que no ejecuta | Límite seguro del chatbot | 14. Asistente Gemini |
@@ -71,7 +72,7 @@ Se pueden combinar las dos primeras pruebas de autorización en una sola captura
 
 ## Diagramas a exportar
 
-Fuentes Mermaid en `docs/ENTREGA_FINAL.md`; exportar a SVG o PNG de alta resolución y comprobar tamaño de texto:
+Fuentes Mermaid en `docs/ENTREGA_FINAL.md` y `docs/diagramas/`; SVG generados en `docs/diagramas/exportados/`. Revisar tamaño de texto:
 
 1. Arquitectura y despliegue.
 2. Casos de uso con los cuatro roles.
@@ -119,5 +120,5 @@ La carpeta `03 - Tercera Entrega/Codigo/` debe contener solo el código necesari
 - Las responsabilidades del equipo son una propuesta y deben validarse antes de presentarlas como asignaciones reales.
 - La reflexión final es un borrador; el grupo debe ajustarla a su experiencia.
 - La evidencia de Render/Atlas/Gemini documentada proviene de cierres previos reportados por el equipo; si se agregan capturas nuevas, indicar fecha y no exponer datos reales.
-- El README declara Node `>=22.0.0 <25`; la versión local reportada en una etapa anterior (v26.8.2) queda fuera del rango. Usar una versión compatible para la grabación/validación final.
+- El proyecto declara Node `>=22.0.0 <25`; Render usa Node 24. El entorno local reportado en una etapa anterior (v26.8.2) queda fuera del rango. Usar Node 24 para grabación/validación local.
 - La rama publicada es `tercera-entrega`; no hacer merge a `main` sin aprobación.

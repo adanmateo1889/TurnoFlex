@@ -342,6 +342,8 @@ flowchart LR
     EV -.-> GE
 ```
 
+Los archivos `.mmd` se encuentran en `docs/diagramas/` y los SVG exportados mediante Mermaid CLI temporal están en `docs/diagramas/exportados/`; no se añadieron dependencias al proyecto.
+
 ## 10. Pruebas y evidencias
 
 Los resultados históricos se separan por entorno. “Confirmado por el equipo” identifica validaciones de entregas previas comunicadas como realizadas; esta etapa documental no volvió a ejecutar llamadas de producción ni a alterar datos.
@@ -349,7 +351,8 @@ Los resultados históricos se separan por entorno. “Confirmado por el equipo�
 | Entorno | Caso | Resultado documentado |
 |---|---|---|
 | Local | Inicio de servidor con configuración local y conexión a base de datos | Verificado en etapas de desarrollo; para Windows se usó `npm.cmd` cuando PowerShell bloqueaba `npm.ps1`. |
-| Local | Login `200`, ruta protegida sin token `401`, rol insuficiente `403` | Validados en las pruebas de autenticación previas. |
+| Local | Login `200`, ruta protegida sin token `401` | Validados en las pruebas de autenticación previas. |
+| Local / staging | Rol insuficiente devuelve `403` | Prueba controlada de autorización; obtener su captura en local o staging, sin crear cuentas de prueba en Atlas productivo. |
 | Local | `/auth/me` y respuestas de usuario sin `passwordHash` | Validado en pruebas previas. |
 | Local | Reserva `201`, cancelación `200`, segunda cancelación `409` y disponibilidad restaurada | Reglas probadas en las etapas de turnos; repetir con un conjunto demo antes de una nueva presentación. |
 | MongoDB Atlas | Conexión del backend y persistencia de recursos | Conexión y persistencia confirmadas durante la preparación de Atlas/Render. |
@@ -368,12 +371,14 @@ Los resultados históricos se separan por entorno. “Confirmado por el equipo�
 
 Para la demostración, usar cuentas y datos ficticios claramente identificados, sin documentar credenciales, JWT ni datos personales de producción. Comprobar persistencia en Atlas consultando la colección correspondiente y no guardar una contraseña en la evidencia.
 
+La captura `403` para el PDF debe obtenerse en una prueba controlada local o de staging y rotularse como tal. No crear usuarios en Atlas productivo para esta evidencia.
+
 ## 11. Problemas encontrados y soluciones
 
 | Problema | Resolución aplicada |
 |---|---|
 | PowerShell bloqueaba `npm.ps1` al ejecutar npm | En Windows se utilizó `npm.cmd` para instalar/iniciar sin cambiar la política global del sistema. |
-| Node.js local `v26.8.2` estaba fuera del rango declarado por el proyecto | Para las verificaciones y despliegues, usar una versión compatible con `>=22.0.0 <25`; aunque el proceso local llegó a iniciar, npm señaló la incompatibilidad de engine. |
+| Node.js local `v26.8.2` estaba fuera del rango declarado por el proyecto (`>=22.0.0 <25`) | Render usa Node 24, que está dentro del rango. Para una grabación local, usar Node 24; aunque el proceso anterior llegó a iniciar, npm señaló la incompatibilidad de engine. |
 | `.env` debía separar configuración de código | Se documentaron variables de entorno y se mantuvo `.env` ignorado; `.env.example` usa placeholders, nunca secretos. |
 | Conexión local/remota a Atlas no establecida inicialmente | Se revisó la URI de conexión, la configuración de Network Access de Atlas para el origen del servicio y la autenticación del usuario de base de datos. No publicar la URI ni sus credenciales. |
 | Render no podía autenticar/conectar con Atlas | Se corrigió la configuración del usuario/credencial de base de datos y la conectividad permitida para Render en Atlas; luego se confirmó la conexión estable. |

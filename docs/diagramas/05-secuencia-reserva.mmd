@@ -1,0 +1,12 @@
+sequenceDiagram
+    actor ClienteHTTP
+    participant API as Express / middleware / controller
+    participant DB as MongoDB Atlas
+    ClienteHTTP->>API: PATCH /turnos/:id/cancelar + JWT
+    API->>DB: Verifica usuario activo, rol y propiedad
+    API->>DB: Busca turno y disponibilidad
+    API->>DB: Cambia estado a cancelado
+    API->>DB: Marca disponibilidad como libre
+    API-->>ClienteHTTP: 200 turno cancelado
+    ClienteHTTP->>API: Repite cancelación
+    API-->>ClienteHTTP: 409 ya cancelado

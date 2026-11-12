@@ -1,0 +1,12 @@
+sequenceDiagram
+    actor ClienteHTTP
+    participant API as Express / middleware / controller
+    participant DB as MongoDB Atlas
+    ClienteHTTP->>API: POST /turnos + JWT + IDs
+    API->>DB: Verifica usuario activo y autorización
+    API->>DB: Verifica profesional, cliente y disponibilidad
+    API->>DB: Busca superposición del profesional/cliente
+    API->>DB: Cambia disponibilidad libre a ocupada
+    API->>DB: Crea turno reservado
+    DB-->>API: Turno con ID numérico
+    API-->>ClienteHTTP: 201 o error 400/401/403/404/409

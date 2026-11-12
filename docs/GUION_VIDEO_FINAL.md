@@ -67,13 +67,16 @@ Tiempo de voz aproximado: Mateo 3:45 (incluye apertura y cierre compartido), Fer
 
 **Acciones de pantalla, en este orden:**
 
-1. Mostrar una ruta protegida sin token: `401`.
-2. Mostrar una operación autorizada y segura: `200`.
-3. Mostrar una operación con rol insuficiente: `403`.
-4. Mostrar reserva `201`, cancelación `200` y segunda cancelación `409`, solo si se preparó un conjunto de demostración no crítico.
-5. Mostrar disponibilidad restaurada en una consulta.
+1. Ejecutar login del usuario demo: `200`; cubrir el token de la respuesta antes de guardar o compartir la pantalla.
+2. Mostrar una ruta protegida sin token: `401`; confirmar que Thunder Client no haya conservado un header de autorización.
+3. Mostrar una consulta autorizada y segura: `200`.
+4. Mostrar una captura de prueba controlada local/staging con rol insuficiente (`403`); identificar en pantalla que no es producción. No crear usuario adicional en Atlas productivo.
+5. Mostrar reserva `201`, cancelación `200` y segunda cancelación `409` usando la disponibilidad demo libre en producción.
+6. Mostrar disponibilidad restaurada en una consulta.
 
-Si no hay datos demo preparados, usar capturas previamente obtenidas o narrar los resultados reportados; no crear/eliminar cuentas ni alterar datos reales durante la grabación.
+Si no hay datos demo preparados, usar capturas previamente obtenidas o narrar los resultados reportados; no crear/eliminar cuentas ni alterar datos reales durante la grabación. La lectura actual de Atlas encontró una disponibilidad libre ligada al profesional demo y un cliente demo sin usuario asociado. El coordinador puede crear el turno para ese cliente. La reserva/cancelación deja un nuevo turno cancelado, aceptable como evidencia. La captura `403` se obtiene local/staging y debe quedar rotulada como tal.
+
+**Nota de entorno:** el proyecto declara Node `>=22 <25`; Render usa Node 24 y las etapas locales anteriores utilizaron Node 26, fuera del rango. Si se ejecuta el backend local para grabar, usar Node 24.
 
 **Transición:** “Marcelo cierra con el despliegue, las pruebas y el alcance del asistente.”
 

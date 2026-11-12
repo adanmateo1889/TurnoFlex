@@ -58,7 +58,7 @@ El cliente HTTP consume una API Express ejecutada en Render. Las rutas públicas
 
 ## 7. Tecnologías utilizadas
 
-Node.js (rango declarado `>=22.0.0 <25`), Express 5, JavaScript, MongoDB Atlas, Mongoose, JWT (`jsonwebtoken`), bcryptjs, dotenv, Pug, Gemini API y Render.
+Node.js (rango declarado `>=22.0.0 <25`; Render usa Node 24; el entorno local de etapas anteriores utilizó Node 26, fuera del rango), Express 5, JavaScript, MongoDB Atlas, Mongoose, JWT (`jsonwebtoken`), bcryptjs, dotenv, Pug, Gemini API y Render. Para una grabación local, se recomienda usar Node 24.
 
 ## 8. Modelo de datos
 
@@ -166,7 +166,7 @@ Los actores definidos en el modelo conceptual —coordinador, recepcionista, pro
 
 ## 19. Diagramas
 
-Convertir a imágenes legibles y revisar contra la implementación antes de incorporarlos:
+Los siete diagramas Mermaid fueron exportados a SVG en `docs/diagramas/exportados/` mediante Mermaid CLI temporal; no se añadió dependencia al proyecto. Abrir y revisar legibilidad antes de incorporarlos:
 
 1. **D1 — Arquitectura y despliegue:** cliente HTTP, Express/Render, rutas, middleware, controladores, Mongoose/Atlas y Gemini.
 2. **D2 — Casos de uso:** actores y acciones permitidas.
@@ -186,7 +186,8 @@ Resultados según las validaciones reportadas al cerrar las etapas anteriores; n
 |---|---|
 | Local | Inicio y conexión, autenticación, permisos, `/auth/me` sin `passwordHash`, reglas de reserva/cancelación. |
 | MongoDB Atlas | Conexión remota y persistencia confirmadas durante la preparación del despliegue. |
-| Render | `GET /` `200`; ruta protegida sin token `401`; login y `/auth/me` `200`; rol insuficiente `403`; reserva `201`; cancelación `200`; segunda cancelación `409`; disponibilidad liberada. |
+| Render / producción | `GET /` `200`; ruta protegida sin token `401`; login `200`; reserva `201`; cancelación `200`; segunda cancelación `409`; disponibilidad liberada; Gemini en producción `200` según las validaciones reportadas. |
+| Local / staging | Rol insuficiente `403`, como prueba controlada de autorización. No crear usuarios adicionales en Atlas productivo para esta evidencia. |
 | Render / Gemini | Sin JWT `401`; consulta informativa `200`; intento de cancelar respondido sin ejecutar; entradas inválidas `400`; ausencia de secretos en respuestas/logs reportada. |
 
 El equipo informó respuestas Gemini `503` transitorias durante pruebas y validación posterior `200`. No se incorporó un framework de testing automatizado como parte de esta entrega.
